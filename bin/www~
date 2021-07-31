@@ -1,0 +1,216 @@
+#!/usr/bin/env node
+
+
+var app = require('../app');
+var debug = require('debug')('rfid:server');
+var http = require('http');
+var mysql = require('mysql');
+var request = require('request');
+var yyyymmdd = require('yyyy-mm-dd');
+var con = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "raspberry",
+  database: "rfid",
+  multipleStatements: true
+});
+
+con.connect(function(err) {
+    if (err) throw err;
+});
+
+app.set('port', process.env.PORT || 8080);
+var server = app.listen(app.get('port'), function(){
+	debug('Express Server listening on port' + server.address().port);
+});
+
+
+// Loading socket.io
+var io = require('socket.io').listen(server);
+
+// When a client connects, we note it in the console
+io.sockets.on('connection', function (socket) {
+    console.log('A client is connected!');
+    socket.emit('message', 'You are connected!');
+});
+
+
+
+var rfid = '';
+var sys   = require('util'),
+    spawn = require('child_process').spawn,
+    dummy  = spawn('python', ['input1.py']);
+
+dummy.stdout.on('data', function(data) {
+    rfid = (data.toString());
+    rfid = rfid.slice(0, -1);
+	con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
+	    if (err) throw err;
+	    if (studID.length < 1){
+		console.log('Invalid RFID');
+		}
+
+            else{
+		//console.log(studID);
+		con.query("SELECT status FROM records WHERE student_id = " + studID[0].id, function (err, status, fields) {
+		    if (err) throw err;
+		if (status[0].status == 'IN'){
+			console.log('Person is already Signed In!');
+		    }
+
+		else{
+		    con.query("SELECT * FROM students WHERE rfid_number = " + rfid, function (err, result, fields) {
+		    if (err) throw err;
+
+
+			    else{
+			
+			    var sql = "UPDATE records SET status='IN' WHERE student_id ="  + studID[0].id +";" + "INSERT INTO student_log (id, student_id, status, date) VALUES (NULL, "+studID[0].id+", 'IN', CURRENT_TIMESTAMP)";     
+			    con.query(sql, [2, 1], function(error, update, fields) {
+			    if (err) throw err;
+				});
+
+
+			         io.emit('message', (rfid));
+		            io.emit('firstname', (result[0].firstname));
+		            io.emit('lastname', (result[0].lastname));
+		            io.emit('middlename', (result[0].middlename.charAt(0)));
+		            io.emit('admission_no', (result[0].admission_no));
+		            io.emit('studImage', (result[0].image));
+		            io.emit('status', ('images/checkIN.png'));
+		    	      console.log(rfid);
+		    	      console.log('SignIn');
+			         console.log('Firstname: '+result[0].firstname);
+			         console.log('Middlename: '+result[0].middlename.charAt(0));
+			         console.log('Lastname: '+result[0].lastname);
+		            console.log('ID No.: '+result[0].admission_no);
+
+
+				   var dateTime =  yyyymmdd.withTime();
+					var options = {
+					  url: 'http://sja.goshencybernetics.com/ajax/insertsmsque',
+					  headers: {
+				        'sms_number': '09750498671',
+				        'sms_msg' :'Test Text SMS',
+				        'token' :'123123',
+				        'date_created' : dateTime					    
+					    
+					  }
+					};
+					 
+					function callback(error, response, body) {
+					  if (!error && response.statusCode == 200) {
+					    var info = JSON.parse(body);
+					    console.log(info);
+					  }
+					}
+					 
+					request(options, callback);
+
+
+				
+				}
+
+
+
+                      });
+                    }
+		  });
+		}
+	});
+});
+
+ 
+
+
+
+
+
+
+var rfid2 = '';
+var sys2   = require('util'),
+    spawn2 = require('child_process').spawn,
+    dummy2  = spawn('python', ['input2.py']);
+
+
+
+dummy2.stdout.on('data', function(data) {
+    rfid = (data.toString());
+    rfid = rfid.slice(0, -1);
+	con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
+	    if (err) throw err;
+	    if (studID.length < 1){
+		console.log('Invalid RFID');
+		}
+
+            else{
+		//console.log(studID);
+		con.query("SELECT status FROM records WHERE student_id = " + studID[0].id, function (err, status, fields) {
+		    if (err) throw err;
+		if (status[0].status == 'OUT'){
+			console.log('Person is already Signed Out!');
+		    }
+
+		else{
+		    con.query("SELECT * FROM students WHERE rfid_number = " + rfid, function (err, result, fields) {
+		    if (err) throw err;
+
+
+			    else{
+			
+
+			    var sql = "UPDATE records SET status='OUT' WHERE student_id ="  + studID[0].id +";" + "INSERT INTO student_log (id, student_id, status, date) VALUES (NULL, "+studID[0].id+", 'OUT', CURRENT_TIMESTAMP)";     
+			    con.query(sql, [2, 1], function(error, update, fields) {
+			    if (err) throw err;
+				});
+
+
+			         io.emit('message', (rfid));
+		            io.emit('firstname', (result[0].firstname));
+		            io.emit('lastname', (result[0].lastname));
+		            io.emit('middlename', (result[0].middlename.charAt(0)));
+		            io.emit('admission_no', (result[0].admission_no));
+		            io.emit('studImage', (result[0].image));
+		            io.emit('status', ('images/checkOUT.png'));
+		    	      console.log(rfid);
+		    	      console.log('SignOut');
+			         console.log('Firstname: '+result[0].firstname);
+			         console.log('Middlename: '+result[0].middlename.charAt(0));
+			         console.log('Lastname: '+result[0].lastname);
+		            console.log('ID No.: '+result[0].admission_no);
+				
+					var options = {
+					  url: 'http://sja.goshencybernetics.com/ajax/insertsmsque',
+					  headers: {
+				        'sms_number': '09750498671',
+				        'sms_msg' :'Test Text SMS',
+				        'token' :'123123',
+				        'date_created' :'2018-01-19 07:29:19'					    
+					    
+					  }
+					};
+					 
+					function callback(error, response, body) {
+					  if (!error && response.statusCode == 200) {
+					    var info = JSON.parse(body);
+					    console.log(info);
+					  }
+					}
+					 
+					request(options, callback);				
+				
+				
+				
+				
+				}
+
+
+
+                      });
+                    }
+		  });
+		}
+	});
+});
+
+ 

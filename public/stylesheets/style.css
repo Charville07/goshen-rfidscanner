@@ -1,0 +1,80 @@
+    html, body{
+		background-color:#2f3ce3;
+		height: 100%; 
+		overflow: hidden
+    }
+    /* On small screens, set height to 'auto' for sidenav and grid */
+    @media screen and (max-width: 767px) {
+      .row.content {height: auto;} 
+    }
+
+   p{
+	margin:0!important;
+    }
+
+   .clock{
+   	color:white;
+        padding-left:5%;
+   	font-family: Oswald;		
+   	font-size:950%!important;
+   	font-family:sans-serif;
+	line-height:normal;
+	letter-spacing:-12px;
+   }
+   .date{
+   	color: white;
+	padding-right:15%;
+   	font-size:250%!important;
+   	font-family:sans-serif;
+
+   }
+
+   .status{
+   	text-align: center;
+   }
+   
+   .lrn{
+	color:#ffca46;
+	font-weight:600;
+	font-size:280%;
+	font-family:oswald;
+	line-height:normal;
+	padding-left:5%;
+	padding-top:3%;
+	}
+
+   .fname{
+
+	color:white;
+	font-size:500%;
+	font-weight:bold;
+	font-family:oswald;
+	line-height:normal;
+	letter-spacing:-5px;
+	padding-left:5%;
+	height:25%;
+}
+
+
+   .lname{
+	color:white;
+	font-size:400%;
+	font-family:oswald;
+	line-height:normal;
+	letter-spacing:0px;
+	padding-left:5%;
+	height:30%;
+}
+
+   .section{
+	color:white;
+	font-size:280%;
+	font-family:oswald;
+	line-height:normal;
+	letter-spacing:1px;
+	padding-left:5%;
+	font-weight:bold;
+}
+
+
+
