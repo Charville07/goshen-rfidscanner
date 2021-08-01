@@ -45,7 +45,8 @@ internetAvailable({
 
   console.log("Internet available");
   
-  var url = "http://157.230.43.105/vmc/ajax/getstudentlist";
+  // var url = "http://157.230.43.105/vmc/ajax/getstudentlist";
+  var url = "https://mvc.bridgette.app/staging/api/col_student_info/getstudentlist/";
   request({
       url: url,
       json: true
@@ -54,91 +55,27 @@ internetAvailable({
         console.log("Number of students: "+jsondata.length);
         var values = [];
         for(var i=0; i< jsondata.length; i++){
+          // console.log(values);
           values.push([
-                      jsondata[i].id,
                       jsondata[i].student_id,
                       jsondata[i].admission_no,
-                      jsondata[i].class_id,
-                      jsondata[i].class,
-                      jsondata[i].section_id,
-                      jsondata[i].section,
-                      jsondata[i].lrn,
+                      jsondata[i].program_name,
+                      jsondata[i].major_in,
                       jsondata[i].firstname,
                       jsondata[i].middlename,
                       jsondata[i].lastname,
-                      jsondata[i].gender,
                       jsondata[i].image,
-                      jsondata[i].father_name,
-                      jsondata[i].father_midname,
-                      jsondata[i].father_lastname,
-                      jsondata[i].father_phone,
-                      jsondata[i].mother_name,
-                      jsondata[i].mother_midname,
-                      jsondata[i].mother_lastname,
-                      jsondata[i].mother_phone,
-                      jsondata[i].guardian_name,
-                      jsondata[i].guardian_midname,
-                      jsondata[i].guardian_lastname,
                       jsondata[i].guardian_phone,
                       jsondata[i].rfid_number,
                       jsondata[i].lunch_pass,
                       jsondata[i].commuter_pass
                     ]);
         }
-        con.query("truncate students"+";"+'INSERT INTO students (id,student_id,admission_no,class_id,class,section_id,section,lrn,firstname,middlename,lastname,gender,image,father_name,father_midname,father_lastname,father_phone,mother_name,mother_midname,mother_lastname,mother_phone,guardian_name,guardian_midname,guardian_lastname,guardian_phone,rfid_number,lunch_pass,commuter_pass) VALUES ?', [values], function(err,result) {
+        con.query("truncate students"+";"+'INSERT INTO students (student_id,admission_no,program_name,major_in,firstname,middlename,lastname,image,guardian_phone,rfid_number,lunch_pass,commuter_pass) VALUES ?', [values], function(err,result) {
           if(err) {
             console.log('Update Student List Failed!');
           }else{
             console.log('Update Student List Success!');
-          }
-        });
-      }
-
-  });
-
-  // var url = "http://157.230.43.105/vmc/ajax/getcollegestudentlist";
-  var url = "http://157.230.43.105/vmccollege/ajax/getcollegestudentlist";
-  request({
-      url: url,
-      json: true
-  }, function (error, response, jsondata) {
-      if (!error && response.statusCode === 200) {
-        console.log("Number of college students: "+jsondata.length);
-        var values = [];
-        for(var i=0; i< jsondata.length; i++){
-          values.push([
-                      jsondata[i].student_id,
-                      jsondata[i].admission_no,
-                      jsondata[i].lrn,
-                      jsondata[i].firstname,
-                      jsondata[i].middlename,
-                      jsondata[i].lastname,
-                      jsondata[i].gender,
-                      jsondata[i].image,
-                      jsondata[i].father_name,
-                      jsondata[i].father_midname,
-                      jsondata[i].father_lastname,
-                      jsondata[i].father_phone,
-                      jsondata[i].mother_name,
-                      jsondata[i].mother_midname,
-                      jsondata[i].mother_lastname,
-                      jsondata[i].mother_phone,
-                      jsondata[i].guardian_name,
-                      jsondata[i].guardian_midname,
-                      jsondata[i].guardian_lastname,
-                      jsondata[i].guardian_phone,
-                      jsondata[i].rfid_number,
-                      jsondata[i].lunch_pass,
-                      jsondata[i].commuter_pass,
-                      jsondata[i].year,
-                      jsondata[i].course
-                    ]);
-        }
-        con.query("truncate college_students"+";"+'INSERT INTO college_students (student_id,admission_no,lrn,firstname,middlename,lastname,gender,image,father_name,father_midname,father_lastname,father_phone,mother_name,mother_midname,mother_lastname,mother_phone,guardian_name,guardian_midname,guardian_lastname,guardian_phone,rfid_number,lunch_pass,commuter_pass,year,course) VALUES ?', [values], function(err,result) {
-          if(err) {
-            console.log('Update College Student List Failed!');
-          }else{
-            console.log('Update College Student List Success!');
           }
         });
       }
@@ -189,19 +126,29 @@ var rfid = '';
 var sys   = require('util'),
     spawn = require('child_process').spawn,
     dummy  = spawn('python', ['input1.py']);
+
+    dummy.stderr.on('data', (data) => {
+      console.error(`ps stderr: ${data}`);
+    });
+
+    dummy.stdout.on('data', (data) => {
+      console.log(data.toString());
+    });
+
     dummy.stdout.on('data', function(data) {    
     rfid = (data.toString());
     rfid = rfid.slice(0, -1);
+    console.log(rfid);
 
-    dns.resolve('goshencybernetics.com', function(err) {
-      if (err) {
-        console.log("No connection");
-        io.emit('device_status', ('OFFLINE'));
-      } else {
-        console.log("Connected");
-        io.emit('device_status', ('ONLINE'));
-      }
-    });
+    // dns.resolve('goshencybernetics.com', function(err) {
+    //   if (err) {
+    //     console.log("No connection");
+    //     io.emit('device_status', ('OFFLINE'));
+    //   } else {
+    //     console.log("Connected");
+    //     io.emit('device_status', ('ONLINE'));
+    //   }
+    // });
 
     console.log('Scanner 1');
     //---------------------------------------- Query start -----------------------------------------------------------------------
