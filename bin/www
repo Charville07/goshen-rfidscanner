@@ -9,6 +9,9 @@ var request = require('request');
 var internetAvailable = require("internet-available");
 var fs = require('fs');
 var dns = require('dns');
+const axios = require('axios');
+const download = require('image-downloader');
+
 var yyyymmdd = require('yyyy-mm-dd');
 var con = mysql.createConnection({
   host: "localhost",
@@ -17,6 +20,23 @@ var con = mysql.createConnection({
   database: "rfid",
   multipleStatements: true
 });
+
+let options = [];
+
+var schoolV = "mvc";
+var faculty_phone = "09164812418";
+
+var RefreshPage;
+var RefreshPageInterval = 180000;//180000;
+
+var modalPage;
+var modalPageInterval = 300000;//300000;
+let modalPageTitle = "";
+let modalPageMessage = "";
+
+RefreshPage =  setTimeout(function() {
+  return console.log("1st refresh page!");
+}, 0);
 
 con.connect(function(err) {
   if (err) {
@@ -38,14 +58,13 @@ io.sockets.on('connection', function (socket) {
 
 
 internetAvailable({
-  domainName: "157.230.43.105",
+  domainName: "mvc.bridgette.app",
   port: 53,
   host: '8.8.8.8'
 }).then(() => {
 
   console.log("Internet available");
   
-  // var url = "http://157.230.43.105/vmc/ajax/getstudentlist";
   var url = "https://mvc.bridgette.app/staging/api/col_student_info/getstudentlist/";
   request({
       url: url,
@@ -55,23 +74,24 @@ internetAvailable({
         console.log("Number of students: "+jsondata.length);
         var values = [];
         for(var i=0; i< jsondata.length; i++){
-          // console.log(values);
-          values.push([
-                      jsondata[i].student_id,
-                      jsondata[i].admission_no,
-                      jsondata[i].program_name,
-                      jsondata[i].major_in,
-                      jsondata[i].firstname,
-                      jsondata[i].middlename,
-                      jsondata[i].lastname,
-                      jsondata[i].image,
-                      jsondata[i].guardian_phone,
-                      jsondata[i].rfid_number,
-                      jsondata[i].lunch_pass,
-                      jsondata[i].commuter_pass
-                    ]);
-        }
-        con.query("truncate students"+";"+'INSERT INTO students (student_id,admission_no,program_name,major_in,firstname,middlename,lastname,image,guardian_phone,rfid_number,lunch_pass,commuter_pass) VALUES ?', [values], function(err,result) {
+            // console.log(values);
+            values.push([
+                        jsondata[i].student_id,
+                        jsondata[i].admission_no,
+                        jsondata[i].program_short_name,
+                        jsondata[i].program_name,
+                        jsondata[i].major_in,
+                        jsondata[i].firstname,
+                        jsondata[i].middlename,
+                        jsondata[i].lastname,
+                        jsondata[i].image,
+                        jsondata[i].guardian_phone,
+                        jsondata[i].rfid_number,
+                        jsondata[i].lunch_pass,
+                        jsondata[i].commuter_pass
+                      ]);
+          }
+          con.query("truncate students"+";"+'INSERT INTO students (student_id,admission_no,program_short_name,program_name,major_in,firstname,middlename,lastname,image,guardian_phone,rfid_number,lunch_pass,commuter_pass) VALUES ?', [values], function(err,result) {
           if(err) {
             console.log('Update Student List Failed!');
           }else{
@@ -82,7 +102,8 @@ internetAvailable({
 
   });
 
-  var url = "http://157.230.43.105/vmc/ajax/getfacultyandstafflist";
+
+  var url = "http://157.230.43.105/" + schoolV + "/ajax/getfacultyandstafflist";
   request({
       url: url,
       json: true
@@ -126,591 +147,216 @@ var rfid = '';
 var sys   = require('util'),
     spawn = require('child_process').spawn,
     dummy  = spawn('python', ['input1.py']);
-
-    dummy.stderr.on('data', (data) => {
-      console.error(`ps stderr: ${data}`);
-    });
-
-    dummy.stdout.on('data', (data) => {
-      console.log(data.toString());
-    });
-
     dummy.stdout.on('data', function(data) {    
-    rfid = (data.toString());
-    rfid = rfid.slice(0, -1);
-    console.log(rfid);
-
-    // dns.resolve('goshencybernetics.com', function(err) {
-    //   if (err) {
-    //     console.log("No connection");
-    //     io.emit('device_status', ('OFFLINE'));
-    //   } else {
-    //     console.log("Connected");
-    //     io.emit('device_status', ('ONLINE'));
-    //   }
-    // });
-
-    console.log('Scanner 1');
-    //---------------------------------------- Query start -----------------------------------------------------------------------
-    con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
-      if (err) {console.log("scan error students");}else{
-        con.query("SELECT id FROM staffs WHERE rfid_number = " + rfid, function (err, staffID, fields) {
-          if (err) {console.log("scan error staff");}else{
-            con.query("SELECT id FROM college_students WHERE rfid_number = " + rfid, function (err, colStudID, fields) {
-              if (err) {console.log("scan error college");}else{
-                //--------------------------------------- IF Student RFID Found  start -------------------------------------------------------
-                if (studID.length > 0){
-                  console.log('Student ID found');
-                  con.query("SELECT * FROM students WHERE rfid_number = " + rfid, function (err, result, fields) {
-                    if (err) {console.log("scan error student2");}else{
-
-                      var today = new Date()
-                      var curHr = today.getHours()
-                      if (curHr < 12) {
-                        // console.log('Morning');
-                          // if (result[0].morning_status == 'OUT'){
-                            console.log('Sign IN!')
-
-                            //------------------------------------ Student Morning In start -------------------------------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                            io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }
-                            else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                              };
-                      
-                            if (result[0].section == null || result[0].section == '' || result[0].section == 'none' || result[0].section == 'None'){
-                              io.emit('section', (result[0].class));
-                            }
-                            else{
-                              io.emit('section', (result[0].class+'-'+result[0].section));
-                              };
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }
-                            else{
-                                io.emit('studImage', (result[0].image));
-                              };
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Class: '+result[0].class);
-                            console.log('Section: '+result[0].section);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-                        
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                              {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                            function(error, response, body){
-                                  console.log(body);
-                            });
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO student_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-                          // con.query("UPDATE students SET morning_status='IN' WHERE id="+studID[0].id, function (err, update, fields) {
-                          //   if (err) {console.log('student update status failed.');}
-                          // });
-                          //---------------------------------------------- Student Morning In end -----------------------------------------
-                          // }else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      } else{
-                        console.log('Afternoon');
-                        // if (result[0].afternoon_status == 'OUT'){
-                            console.log('Sign IN!');
-                            //------------------------------------------- Student Afternoon In start ----------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                              io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                            }
-                    
-                            if (result[0].section == null || result[0].section == '' || result[0].section == 'none' || result[0].section == 'None'){
-                              io.emit('section', (result[0].class));
-                            }else{
-                              io.emit('section', (result[0].class+'-'+result[0].section));
-                            }
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }else{
-                              io.emit('studImage', (result[0].image));
-                            }
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Class: '+result[0].class);
-                            console.log('Section: '+result[0].section);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-
-
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                                {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                                function(error, response, body){
-                                    console.log(body);
-                            });
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO student_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-                            // con.query("UPDATE students SET afternoon_status='IN' WHERE id="+studID[0].id, function (err, update, fields) {
-                            //   if (err) {console.log('student update status failed.');}
-                            // });
-
-
-                          //------------------------------------------- Student Afternoon In end ------------------------------------------
-                          // }
-                          // else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      }
-                    }
-
-
-                  });
-                }
-                    //---------------------------------------------- If student RFID found end ----------------------------------------------------
-                //--------------------------------------- IF CollegeStudent RFID Found  start -------------------------------------------------------
-                else if (colStudID.length > 0){
-                  console.log('College Student ID found');
-                  con.query("SELECT * FROM college_students WHERE rfid_number = " + rfid, function (err, result, fields) {
-                    if (err) {console.log("scan error college2");}else{
-
-                      var today = new Date()
-                      var curHr = today.getHours()
-                      if (curHr < 12) {
-                        // console.log('Morning');
-                          // if (result[0].morning_status == 'OUT'){
-                            console.log('Sign IN!')
-
-                            //------------------------------------College Student Morning In start -------------------------------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                            io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }
-                            else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                              };
-                      
-                            if (result[0].course == null || result[0].course == '' || result[0].course == 'none' || result[0].course == 'None'){
-                              io.emit('section', (result[0].year));
-                            }
-                            else{
-                              io.emit('section', (result[0].year+'-'+result[0].course));
-                              };
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }
-                            else{
-                                io.emit('studImage', ("uploads/college_images/"+result[0].image));
-                              };
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Year: '+result[0].year);
-                            console.log('Course: '+result[0].course);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-                        
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                              {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                            function(error, response, body){
-                                  console.log(body);
-                            });
-
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO college_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-                          // con.query("UPDATE college_students SET morning_status='IN' WHERE id="+colStudID[0].id, function (err, update, fields) {
-                          //   if (err) {console.log('college student update status failed.');}
-                          // });
-                          //---------------------------------------------- College Student Morning In end -----------------------------------------
-                          // }else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      } else{
-                        console.log('Afternoon');
-                        // if (result[0].afternoon_status == 'OUT'){
-                            console.log('Sign IN!');
-                            //------------------------------------------- College Student Afternoon In start ----------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                              io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                            }
-                    
-                            if (result[0].course == null || result[0].course == '' || result[0].course == 'none' || result[0].course == 'None'){
-                              io.emit('section', (result[0].year));
-                            }else{
-                              io.emit('section', (result[0].year+'-'+result[0].course));
-                            }
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }else{
-                              io.emit('studImage',("uploads/college_images/"+result[0].image));
-                            }
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Year: '+result[0].year);
-                            console.log('Course: '+result[0].course);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-
-
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                                {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                                function(error, response, body){
-                                    console.log(body);
-                            });
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO college_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-                            // con.query("UPDATE college_students SET afternoon_status='IN' WHERE id="+colStudID[0].id, function (err, update, fields) {
-                            //   if (err) {console.log('college student update status failed.');}
-                            // });
-
-
-                          //------------------------------------------- Student Afternoon In end ------------------------------------------
-                          // }
-                          // else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      }
-
-                    }
-
-
-                  });
-                }
-                    //---------------------------------------------- If student RFID found end ----------------------------------------------------
-                    //---------------------------------------------- If Staff RFID found start ----------------------------------------------------
-                else if (staffID.length > 0){
-                  console.log('Staff ID found');
-
-
-                  con.query("SELECT * FROM staffs WHERE rfid_number = " + rfid, function (err, result, fields) {
-                    if (err) {console.log("scan error staff2");}else{
-                      var today = new Date()
-                      var curHr = today.getHours()
-                      if (curHr < 12) {
-                        console.log('Morning');
-
-                        var d = new Date(),
-                        minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                        hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                        var dateTime =  yyyymmdd.withTime();
-                        
-
-                        // dateTime = d.getFullYear()+'-'+d.getDate()+'-'+d.getMonth()+' '+hours+':'+minutes
-                        time = hours+':'+minutes;
-
-                        io.emit('message', (rfid));
-                        io.emit('color', ('#ffffff'));
-                        io.emit('firstname', (result[0].firstname));
-                        io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                        io.emit('middlename', (result[0].middlename.charAt(0)));
-                        io.emit('valid', ('visible'));
-
-                        io.emit('admission_no', (result[0].role.toUpperCase()));
-                        io.emit('section', (''));
-
-                        if (result[0].image == null || result[0].image == ''){
-                                io.emit('studImage', ('uploads/student_images/default.jpg'));
-                        }else{
-                          io.emit('studImage', (result[0].image));
-                        };
-
-                        io.emit('status', ('CHECKED IN'));
-
-                        
-                        request.post('http://157.230.43.105/vmc/ajax/insertfacultydtr', 
-                        {form:{ faculty_id: result[0].user_id, role: result[0].role, type: 'IN', time: time, date: dateTime}}, 
-                            function(error, response, body){
-                                console.log(body);
-                        });
-
-                        con.query("INSERT INTO facultystaff_dtr_log (faculty_id,type,role,time,date,status) VALUES ('"+result[0].user_id+"','IN','"+result[0].role+"','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                          if (err) {console.log('Insert Student Log Failed!');
-                          }else{console.log('Insert Student Log Success!');}
-                        });
-
-                        console.log('CHECKED IN');
-                        console.log(result[0].role);
-                        console.log(rfid);
-                        console.log(result[0].firstname);
-                        console.log(result[0].lastname+'&ensp;'+result[0].middlename.charAt(0));
-                        console.log(result[0].middlename.charAt(0));
-                        console.log(result[0].image);
-                        console.log(dateTime);
-                        console.log(time);
-
-
-                          // if (result[0].morning_status == 'OUT'){
-                          //   console.log('Sign IN!')
-                          // }
-                          // else{
-                          //   console.log('Already Signed IN!');
-                          //   io.emit('firstname', ('Loading...'));
-                          //   io.emit('lastname', ('Loading...'));
-                          //   io.emit('admission_no', ('Loading...'));
-                          //   io.emit('class', ('Loading...'));
-                          //   io.emit('section', ('Loading...'));
-                          //   io.emit('studImage', (result[0].image));
-                          //   io.emit('status', ('Already Tapped IN!'));
-                          //   io.emit('invalid', ('hidden'));
-                          //   io.emit('color', ('#ffffff'));
-                          //   }
-
-                      } else{
-                        console.log('Afternoon');
-
-                        var d = new Date(),
-                        minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                        hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                        var dateTime =  yyyymmdd.withTime();
-                        
-
-                        // dateTime = d.getFullYear()+'-'+d.getDate()+'-'+d.getMonth()+' '+hours+':'+minutes
-                        time = hours+':'+minutes;
-
-                        io.emit('message', (rfid));
-                        io.emit('color', ('#ffffff'));
-                        io.emit('firstname', (result[0].firstname));
-                        io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                        io.emit('middlename', (result[0].middlename.charAt(0)));
-                        io.emit('valid', ('visible'));
-
-                        io.emit('admission_no', (result[0].role.toUpperCase()));
-                        io.emit('section', (''));
-
-                        if (result[0].image == null || result[0].image == ''){
-                                io.emit('studImage', ('uploads/student_images/default.jpg'));
-                        }else{
-                          io.emit('studImage', (result[0].image));
-                        };
-
-                        io.emit('status', ('CHECKED IN'));
-
-                        
-                        request.post('http://157.230.43.105/vmc/ajax/insertfacultydtr', 
-                        {form:{ faculty_id: result[0].user_id, role: result[0].role, type: 'IN', time: time, date: dateTime}}, 
-                            function(error, response, body){
-                                console.log(body);
-                        });
-
-                        con.query("INSERT INTO facultystaff_dtr_log (faculty_id,type,role,time,date,status) VALUES ('"+result[0].user_id+"','IN','"+result[0].role+"','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                          if (err) {console.log('Insert Student Log Failed!');
-                          }else{console.log('Insert Student Log Success!');}
-                        });
-
-                        console.log('CHECKED IN');
-                        console.log(result[0].role);
-                        console.log(rfid);
-                        console.log(result[0].firstname);
-                        console.log(result[0].lastname+'&ensp;'+result[0].middlename.charAt(0));
-                        console.log(result[0].middlename.charAt(0));
-                        console.log(result[0].image);
-                        console.log(dateTime);
-                        console.log(time);
-
-                          // if (result[0].afternoon_status == 'OUT'){
-                          //   console.log('Sign IN!');
-                          // }
-                          // else{
-                          //   console.log('Already Signed IN!');
-                          //   io.emit('firstname', ('Loading...'));
-                          //   io.emit('lastname', ('Loading...'));
-                          //   io.emit('admission_no', ('Loading...'));
-                          //   io.emit('class', ('Loading...'));
-                          //   io.emit('section', ('Loading...'));
-                          //   io.emit('studImage', (result[0].image));
-                          //   io.emit('status', ('Already Tapped IN!'));
-                          //   io.emit('invalid', ('hidden'));
-                          //   io.emit('color', ('#ffffff'));
-                          //   }
-
-                      }
-                    }
-
-
-                  });
-                }
-                  //---------------------------------------------- If Staff RFID found end ------------------------------------------------------
-                  //-----------------------------------------------Invalid RFID start-------------------------------------------------------------    
-                else{
-                  console.log('Invalid RFID');
-                    io.emit('firstname', ('Loading...'));
-                    io.emit('lastname', ('Loading...'));
-                    io.emit('admission_no', ('Loading...'));
-                    io.emit('class', ('Loading...'));
-                    io.emit('section', ('Loading...'));
-                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                    io.emit('status', ('INVALID RFID'));
-                    io.emit('invalid', ('hidden'));
-                    io.emit('color', ('#ffffff'));
-                }
-                //----------------------------------------------Invalid RFID end--------------------------------------------------------------
-              }
-            });
+      rfid = (data.toString());
+      rfid = rfid.slice(0, -1);
+
+      dns.resolve('mvc.bridgette.app', function(err) {
+          if (err) {
+            console.log("No connection");
+            io.emit('device_status', ('OFFLINE'));
+          } else {
+            console.log("Connected");
+            io.emit('device_status', ('ONLINE'));
           }
         });
-      }
+
+      console.log('Scanner 1 - IN');
+      console.log(rfid);
+      io.emit('myModal', ('hide'));
+      //---------------------------------------- Query start -----------------------------------------------------------------------
+      con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
+        if (err) {console.log("scan error students");}else{
+          con.query("SELECT id FROM staffs WHERE rfid_number = " + rfid, function (err, staffID, fields) {
+            if (err) {console.log("scan error staff");}else{
+              con.query("SELECT id FROM college_students WHERE rfid_number = " + rfid, function (err, colStudID, fields) {
+                if (err) {console.log("scan error college");}else{
+                  //--------------------------------------- IF Student RFID Found  start -------------------------------------------------------
+                  if (studID.length > 0){
+                    console.log('Student ID found');
+                    con.query("SELECT * FROM students WHERE rfid_number = " + rfid, function (err, result, fields) {
+                      if (err) {console.log("scan error student2");}else{
+
+                        options = {
+                          url : "https://mvc.bridgette.app/staging/uploads/col/students/" + result[0].image,
+                          dest: './public/uploads/student_images/' // Save to /path/to/dest/image.jpg
+                        }
+
+                        download.image(options)
+                          .then(({ filename, image }) => {
+                            console.log('Saved to', filename)  // Saved to /path/to/dest/image.jpg
+                        })
+                          .catch((err) => console.error(err))
+
+                          var today = new Date()
+                          var curHr = today.getHours()
+                          console.log('CHECKED IN!')
+
+                          io.emit('message', (rfid));
+                          io.emit('color', ('#ffffff'));
+                          io.emit('firstname', (result[0].firstname));
+                          io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
+                          io.emit('middlename', (result[0].middlename.charAt(0)));
+                          io.emit('valid', ('visible'));
+
+                          io.emit('admission_no', (result[0].admission_no));
+                      
+                          // if (result[0].major_in == null || result[0].major_in == '' || result[0].major_in == 'none' || result[0].major_in == 'None'){
+                          //     io.emit('section', (result[0].program_name));
+                          // }else{
+                          //     io.emit('section', (result[0].program_name+'-'+result[0].major_in));
+                          //   }
+                            
+                          io.emit('section', (result[0].program_short_name));
+
+                          if (result[0].image == null || result[0].image == ''){
+                              io.emit('studImage', ('/uploads/student_images/default.jpg'));
+                          }
+                          else{
+                              io.emit('studImage', ('/uploads/student_images/' + result[0].image));
+                          };
+
+                          io.emit('status', ('CHECKED IN'));
+                          console.log(rfid);
+                          console.log('CHECKED IN');
+                          console.log('Firstname: '+result[0].firstname);
+                          console.log('Middlename: '+result[0].middlename.charAt(0));
+                          console.log('Lastname: '+result[0].lastname);
+                          console.log('Program Short Name: '+result[0].program_short_name);
+                          console.log('Program: '+result[0].program_name);
+                          console.log('Major: '+result[0].major_in);
+                          console.log('ID No.: '+result[0].admission_no);
+                          console.log('Image: '+result[0].image);
+                      
+                          var dateTime =  yyyymmdd.withTime();
+                          var time = new Date();
+                          request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
+                              {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'MVC', student_id: result[0].student_id , tapped_type: 'IN' }}, 
+                              function(error, response, body){
+                                  console.log(body);
+                          });
+
+                          var d = new Date(),
+                          minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
+                          hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
+
+                          var dateTime =  yyyymmdd.withTime();
+                          
+                          time = hours+':'+minutes;
+
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
+                            if (err) {console.log('Insert Student Log Failed!');
+                            }else{console.log('Insert Student Log Success!');}
+                          });
+
+                      }
+
+
+                    });
+                  }
+                
+                  else if (staffID.length > 0){
+                    console.log('Staff ID found');
+                    con.query("SELECT * FROM staffs WHERE rfid_number = " + rfid, function (err, result, fields) {
+                      if (err) {console.log("scan error staff2");}else{
+                          var today = new Date()
+                          var curHr = today.getHours()
+                      
+                          var d = new Date(),
+                          minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
+                          hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
+
+                          var dateTime =  yyyymmdd.withTime();
+                          
+
+                          // dateTime = d.getFullYear()+'-'+d.getDate()+'-'+d.getMonth()+' '+hours+':'+minutes
+                          time = hours+':'+minutes;
+
+                          io.emit('message', (rfid));
+                          io.emit('color', ('#ffffff'));
+                          io.emit('firstname', (result[0].firstname));
+                          io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
+                          io.emit('middlename', (result[0].middlename.charAt(0)));
+                          io.emit('valid', ('visible'));
+
+                          io.emit('admission_no', (result[0].role.toUpperCase()));
+                          io.emit('section', (''));
+
+                          if (result[0].image == null || result[0].image == ''){
+                                  io.emit('studImage', ('uploads/student_images/default.jpg'));
+                          }else{
+                              io.emit('studImage', (result[0].image));
+                          };
+
+                          io.emit('status', ('CHECKED IN'));
+
+                          
+                          request.post('http://157.230.43.105/' + schoolV + '/ajax/insertfacultydtr', 
+                          {form:{ faculty_id: result[0].user_id, role: result[0].role, type: 'IN', time: time, date: dateTime}}, 
+                              function(error, response, body){
+                                  console.log(body);
+                          });
+
+                          var time = new Date();
+                          request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
+                              {form:{ sms_number: faculty_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: schoolV.toUpperCase(), role: result[0].role, student_id: result[0].user_id , tapped_type: 'IN' }}, 
+                          function(error, response, body){
+                                  console.log(body);
+                          });
+
+                          console.log('CHECKED IN');
+                          console.log(result[0].role);
+                          console.log(rfid);
+                          console.log(result[0].firstname);
+                          console.log(result[0].lastname+'&ensp;'+result[0].middlename.charAt(0));
+                          console.log(result[0].middlename.charAt(0));
+                          console.log(result[0].image);
+                          console.log(dateTime);
+                          console.log(time);
+
+                      }
+
+
+                    });
+                  }
+                  else{
+                    console.log('Invalid RFID');
+                      io.emit('firstname', ('Loading...'));
+                      io.emit('lastname', ('Loading...'));
+                      io.emit('admission_no', ('Loading...'));
+                      io.emit('class', ('Loading...'));
+                      io.emit('section', ('Loading...'));
+                      io.emit('studImage', ('uploads/student_images/default.jpg'));
+                      io.emit('status', ('INVALID RFID'));
+                      io.emit('invalid', ('hidden'));
+                      io.emit('color', ('#ffffff'));
+                  }
+                  //----------------------------------------------Invalid RFID end--------------------------------------------------------------
+                }
+              });
+            }
+          });
+        }
+      });
+
+      clearTimeout(RefreshPage);
+      RefreshPage =  setTimeout(function() {
+        console.log("refresh page! :" + rfid);
+        io.emit('statusC', ('hidden'));
+      }, RefreshPageInterval);
+
+      clearTimeout(modalPage);
+      modalPage =  setTimeout(function() {
+        console.log("show modal page! :" + rfid);
+        io.emit('myModal', ('show'));
+        io.emit('modalTitle', (''));
+      }, modalPageInterval);
     });
-//---------------------------------------------- Query End ------------------------------------------------------------------
-});
+
 //---------------------------------------------- Scanner End -----------------------------------------------------------------
 
 
- 
+
 
 //---------------------------------------- SCANNER start --------------------------------------------------------------------
 var rfid = '';
@@ -718,576 +364,197 @@ var sys   = require('util'),
     spawn = require('child_process').spawn,
     dummy  = spawn('python', ['input2.py']);
     dummy.stdout.on('data', function(data) {    
-    rfid = (data.toString());
-    rfid = rfid.slice(0, -1);
-
-    dns.resolve('goshencybernetics.com', function(err) {
-      if (err) {
-        console.log("No connection");
-        io.emit('device_status', ('OFFLINE'));
-      } else {
-        console.log("Connected");
-        io.emit('device_status', ('ONLINE'));
-      }
-    }); 
-
-    console.log('Scanner 2');
-    //---------------------------------------- Query start -----------------------------------------------------------------------
-    con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
-      if (err) {console.log("scan error students");}else{
-        con.query("SELECT id FROM staffs WHERE rfid_number = " + rfid, function (err, staffID, fields) {
-          if (err) {console.log("scan error staff");}else{
-            con.query("SELECT id FROM college_students WHERE rfid_number = " + rfid, function (err, colStudID, fields) {
-              if (err) {console.log("scan error college");}else{
-                //--------------------------------------- IF Student RFID Found  start -------------------------------------------------------
-                if (studID.length > 0){
-                  console.log('Student ID found');
-                  con.query("SELECT * FROM students WHERE rfid_number = " + rfid, function (err, result, fields) {
-                    if (err) {console.log("scan error student2");}else{
-
-                      var today = new Date()
-                      var curHr = today.getHours()
-                      if (curHr < 12) {
-                        // console.log('Morning');
-                          // if (result[0].morning_status == 'OUT'){
-                            console.log('Sign IN!')
-
-                            //------------------------------------ Student Morning In start -------------------------------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                            io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }
-                            else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                              };
-                      
-                            if (result[0].section == null || result[0].section == '' || result[0].section == 'none' || result[0].section == 'None'){
-                              io.emit('section', (result[0].class));
-                            }
-                            else{
-                              io.emit('section', (result[0].class+'-'+result[0].section));
-                              };
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }
-                            else{
-                                io.emit('studImage', (result[0].image));
-                              };
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Class: '+result[0].class);
-                            console.log('Section: '+result[0].section);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-                        
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                              {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                            function(error, response, body){
-                                  console.log(body);
-                            });
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO student_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-                          // con.query("UPDATE students SET morning_status='IN' WHERE id="+studID[0].id, function (err, update, fields) {
-                          //   if (err) {console.log('student update status failed.');}
-                          // });
-                          //---------------------------------------------- Student Morning In end -----------------------------------------
-                          // }else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      } else{
-                        console.log('Afternoon');
-                        // if (result[0].afternoon_status == 'OUT'){
-                            console.log('Sign IN!');
-                            //------------------------------------------- Student Afternoon In start ----------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                              io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                            }
-                    
-                            if (result[0].section == null || result[0].section == '' || result[0].section == 'none' || result[0].section == 'None'){
-                              io.emit('section', (result[0].class));
-                            }else{
-                              io.emit('section', (result[0].class+'-'+result[0].section));
-                            }
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }else{
-                              io.emit('studImage', (result[0].image));
-                            }
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Class: '+result[0].class);
-                            console.log('Section: '+result[0].section);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-
-
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                                {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                                function(error, response, body){
-                                    console.log(body);
-                            });
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO student_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-
-                            // con.query("UPDATE students SET afternoon_status='IN' WHERE id="+studID[0].id, function (err, update, fields) {
-                            //   if (err) {console.log('student update status failed.');}
-                            // });
-
-
-                          //------------------------------------------- Student Afternoon In end ------------------------------------------
-                          // }
-                          // else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      }
-                    }
-
-
-                  });
-                }
-                    //---------------------------------------------- If student RFID found end ----------------------------------------------------
-                //--------------------------------------- IF CollegeStudent RFID Found  start -------------------------------------------------------
-                else if (colStudID.length > 0){
-                  console.log('College Student ID found');
-                  con.query("SELECT * FROM college_students WHERE rfid_number = " + rfid, function (err, result, fields) {
-                    if (err) {console.log("scan error college2");}else{
-
-                      var today = new Date()
-                      var curHr = today.getHours()
-                      if (curHr < 12) {
-                        // console.log('Morning');
-                          // if (result[0].morning_status == 'OUT'){
-                            console.log('Sign IN!')
-
-                            //------------------------------------College Student Morning In start -------------------------------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                            io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }
-                            else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                              };
-                      
-                            if (result[0].course == null || result[0].course == '' || result[0].course == 'none' || result[0].course == 'None'){
-                              io.emit('section', (result[0].year));
-                            }
-                            else{
-                              io.emit('section', (result[0].year+'-'+result[0].course));
-                              };
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }
-                            else{
-                                io.emit('studImage', ("uploads/college_images/"+result[0].image));
-                              };
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Year: '+result[0].year);
-                            console.log('Course: '+result[0].course);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-                        
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                              {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                            function(error, response, body){
-                                  console.log(body);
-                            });
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO college_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-                          // con.query("UPDATE college_students SET morning_status='IN' WHERE id="+colStudID[0].id, function (err, update, fields) {
-                          //   if (err) {console.log('college student update status failed.');}
-                          // });
-                          //---------------------------------------------- College Student Morning In end -----------------------------------------
-                          // }else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      } else{
-                        console.log('Afternoon');
-                        // if (result[0].afternoon_status == 'OUT'){
-                            console.log('Sign IN!');
-                            //------------------------------------------- College Student Afternoon In start ----------------------------------------
-                            io.emit('message', (rfid));
-                            io.emit('color', ('#ffffff'));
-                            io.emit('firstname', (result[0].firstname));
-                            io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                            io.emit('middlename', (result[0].middlename.charAt(0)));
-                            io.emit('valid', ('visible'));
-
-                            if (result[0].lrn == null || result[0].lrn == '' ){
-                              io.emit('admission_no', (result[0].admission_no));
-                              console.log('LRN is Null!')
-                            }else{
-                              io.emit('admission_no', (result[0].lrn));
-                              console.log('LRN not Null!');
-                            }
-                    
-                            if (result[0].course == null || result[0].course == '' || result[0].course == 'none' || result[0].course == 'None'){
-                              io.emit('section', (result[0].year));
-                            }else{
-                              io.emit('section', (result[0].year+'-'+result[0].course));
-                            }
-
-                            if (result[0].image == null || result[0].image == ''){
-                                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                            }else{
-                              io.emit('studImage', ("uploads/college_images/"+result[0].image));
-                            }
-
-                            io.emit('status', ('CHECKED IN'));
-                            console.log(rfid);
-                            console.log('SignIN');
-                            console.log('Firstname: '+result[0].firstname);
-                            console.log('Middlename: '+result[0].middlename.charAt(0));
-                            console.log('Lastname: '+result[0].lastname);
-                            console.log('Year: '+result[0].year);
-                            console.log('Course: '+result[0].course);
-                            console.log('ID No.: '+result[0].admission_no);
-                            console.log('Image: '+result[0].image);
-
-
-                            var dateTime =  yyyymmdd.withTime();
-                            var time = new Date();
-                            request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
-                                {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is IN school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'VMC', student_id: result[0].id , tapped_type: 'IN' }}, 
-                                function(error, response, body){
-                                    console.log(body);
-                            });
-
-                            var d = new Date(),
-                            minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                            hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                            var dateTime =  yyyymmdd.withTime();
-                            
-                            time = hours+':'+minutes;
-
-                            con.query("INSERT INTO college_tapping_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                              if (err) {console.log('Insert Student Log Failed!');
-                              }else{console.log('Insert Student Log Success!');}
-                            });
-
-
-                            // con.query("UPDATE college_students SET afternoon_status='IN' WHERE id="+colStudID[0].id, function (err, update, fields) {
-                            //   if (err) {console.log('college student update status failed.');}
-                            // });
-
-
-                          //------------------------------------------- Student Afternoon In end ------------------------------------------
-                          // }
-                          // else{
-                          //     console.log('Already Signed IN!');
-                          //     io.emit('firstname', ('Loading...'));
-                          //     io.emit('lastname', ('Loading...'));
-                          //     io.emit('admission_no', ('Loading...'));
-                          //     io.emit('class', ('Loading...'));
-                          //     io.emit('section', ('Loading...'));
-                          //     io.emit('studImage', (result[0].image));
-                          //     io.emit('status', ('Already Tapped IN!'));
-                          //     io.emit('invalid', ('hidden'));
-                          //     io.emit('color', ('#ffffff'));
-                          //   }
-
-                      }
-
-                    }
-
-
-                  });
-                }
-                    //---------------------------------------------- If student RFID found end ----------------------------------------------------
-                    //---------------------------------------------- If Staff RFID found start ----------------------------------------------------
-                else if (staffID.length > 0){
-                  console.log('Staff ID found');
-
-
-                  con.query("SELECT * FROM staffs WHERE rfid_number = " + rfid, function (err, result, fields) {
-                    if (err) {console.log("scan error staff2");}else{
-                      var today = new Date();
-                      var curHr = today.getHours();
-                      if (curHr < 12) {
-                        console.log('Morning');
-
-                        var d = new Date(),
-                        
-                        minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                        hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                        var dateTime =  yyyymmdd.withTime();
-                        
-
-                        // dateTime = d.getFullYear()+'-'+d.getDate()+'-'+d.getMonth()+' '+hours+':'+minutes
-                        time = hours+':'+minutes;
-
-                        io.emit('message', (rfid));
-                        io.emit('color', ('#ffffff'));
-                        io.emit('firstname', (result[0].firstname));
-                        io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                        io.emit('middlename', (result[0].middlename.charAt(0)));
-                        io.emit('valid', ('visible'));
-
-                        io.emit('admission_no', (result[0].role.toUpperCase()));
-                        io.emit('section', (''));
-
-                        if (result[0].image == null || result[0].image == ''){
-                                io.emit('studImage', ('uploads/student_images/default.jpg'));
-                        }else{
-                          io.emit('studImage', (result[0].image));
-                        };
-
-                        io.emit('status', ('CHECKED IN'));
-
-                        
-                        request.post('http://157.230.43.105/vmc/ajax/insertfacultydtr', 
-                        {form:{ faculty_id: result[0].user_id, role: result[0].role, type: 'IN', time: time, date: dateTime}}, 
-                            function(error, response, body){
-                                console.log(body);
-                        });
-
-                        con.query("INSERT INTO facultystaff_dtr_log (faculty_id,type,role,time,date,status) VALUES ('"+result[0].user_id+"','IN','"+result[0].role+"','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                          if (err) {console.log('Insert Student Log Failed!');
-                          }else{console.log('Insert Student Log Success!');}
-                        });
-
-                        console.log('CHECKED IN');
-                        console.log(result[0].role);
-                        console.log(rfid);
-                        console.log(result[0].firstname);
-                        console.log(result[0].lastname+'&ensp;'+result[0].middlename.charAt(0));
-                        console.log(result[0].middlename.charAt(0));
-                        console.log(result[0].image);
-                        console.log(dateTime);
-                        console.log(time);
-
-
-                          // if (result[0].morning_status == 'OUT'){
-                          //   console.log('Sign IN!')
-                          // }
-                          // else{
-                          //   console.log('Already Signed IN!');
-                          //   io.emit('firstname', ('Loading...'));
-                          //   io.emit('lastname', ('Loading...'));
-                          //   io.emit('admission_no', ('Loading...'));
-                          //   io.emit('class', ('Loading...'));
-                          //   io.emit('section', ('Loading...'));
-                          //   io.emit('studImage', (result[0].image));
-                          //   io.emit('status', ('Already Tapped IN!'));
-                          //   io.emit('invalid', ('hidden'));
-                          //   io.emit('color', ('#ffffff'));
-                          //   }
-
-                      } else{
-                        console.log('Afternoon');
-
-                        var d = new Date(),
-                        minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
-                        hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
-
-                        var dateTime =  yyyymmdd.withTime();
-                        
-
-                        // dateTime = d.getFullYear()+'-'+d.getDate()+'-'+d.getMonth()+' '+hours+':'+minutes
-                        time = hours+':'+minutes;
-
-                        io.emit('message', (rfid));
-                        io.emit('color', ('#ffffff'));
-                        io.emit('firstname', (result[0].firstname));
-                        io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
-                        io.emit('middlename', (result[0].middlename.charAt(0)));
-                        io.emit('valid', ('visible'));
-
-                        io.emit('admission_no', (result[0].role.toUpperCase()));
-                        io.emit('section', (''));
-
-                        if (result[0].image == null || result[0].image == ''){
-                                io.emit('studImage', ('uploads/student_images/default.jpg'));
-                        }else{
-                          io.emit('studImage', (result[0].image));
-                        };
-
-                        io.emit('status', ('CHECKED IN'));
-
-                        
-                        request.post('http://157.230.43.105/vmc/ajax/insertfacultydtr', 
-                        {form:{ faculty_id: result[0].user_id, role: result[0].role, type: 'IN', time: time, date: dateTime}}, 
-                            function(error, response, body){
-                                console.log(body);
-                        });
-
-                        con.query("INSERT INTO facultystaff_dtr_log (faculty_id,type,role,time,date,status) VALUES ('"+result[0].user_id+"','IN','"+result[0].role+"','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
-                          if (err) {console.log('Insert Student Log Failed!');
-                          }else{console.log('Insert Student Log Success!');}
-                        });
-
-                        console.log('CHECKED IN');
-                        console.log(result[0].role);
-                        console.log(rfid);
-                        console.log(result[0].firstname);
-                        console.log(result[0].lastname+'&ensp;'+result[0].middlename.charAt(0));
-                        console.log(result[0].middlename.charAt(0));
-                        console.log(result[0].image);
-                        console.log(dateTime);
-                        console.log(time);
-
-                          // if (result[0].afternoon_status == 'OUT'){
-                          //   console.log('Sign IN!');
-                          // }
-                          // else{
-                          //   console.log('Already Signed IN!');
-                          //   io.emit('firstname', ('Loading...'));
-                          //   io.emit('lastname', ('Loading...'));
-                          //   io.emit('admission_no', ('Loading...'));
-                          //   io.emit('class', ('Loading...'));
-                          //   io.emit('section', ('Loading...'));
-                          //   io.emit('studImage', (result[0].image));
-                          //   io.emit('status', ('Already Tapped IN!'));
-                          //   io.emit('invalid', ('hidden'));
-                          //   io.emit('color', ('#ffffff'));
-                          //   }
-
-                      }
-                    }
-
-
-                  });
-                }
-                  //---------------------------------------------- If Staff RFID found end ------------------------------------------------------
-                  //-----------------------------------------------Invalid RFID start-------------------------------------------------------------    
-                else{
-                  console.log('Invalid RFID');
-                    io.emit('firstname', ('Loading...'));
-                    io.emit('lastname', ('Loading...'));
-                    io.emit('admission_no', ('Loading...'));
-                    io.emit('class', ('Loading...'));
-                    io.emit('section', ('Loading...'));
-                    io.emit('studImage', ('uploads/student_images/default.jpg'));
-                    io.emit('status', ('INVALID RFID'));
-                    io.emit('invalid', ('hidden'));
-                    io.emit('color', ('#ffffff'));
-                }
-                //----------------------------------------------Invalid RFID end--------------------------------------------------------------
-              }
-            });
+      rfid = (data.toString());
+      rfid = rfid.slice(0, -1);
+
+      dns.resolve('mvc.bridgette.app', function(err) {
+          if (err) {
+            console.log("No connection");
+            io.emit('device_status', ('OFFLINE'));
+          } else {
+            console.log("Connected");
+            io.emit('device_status', ('ONLINE'));
           }
         });
-      }
+
+      console.log('Scanner 2 - OUT');
+      console.log(rfid);
+      io.emit('myModal', ('hide'));
+      //---------------------------------------- Query start -----------------------------------------------------------------------
+      con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
+        if (err) {console.log("scan error students");}else{
+          con.query("SELECT id FROM staffs WHERE rfid_number = " + rfid, function (err, staffID, fields) {
+            if (err) {console.log("scan error staff");}else{
+              con.query("SELECT id FROM college_students WHERE rfid_number = " + rfid, function (err, colStudID, fields) {
+                if (err) {console.log("scan error college");}else{
+                  //--------------------------------------- IF Student RFID Found  start -------------------------------------------------------
+                  if (studID.length > 0){
+                    console.log('Student ID found');
+                    con.query("SELECT * FROM students WHERE rfid_number = " + rfid, function (err, result, fields) {
+                      if (err) {console.log("scan error student2");}else{
+
+                          var today = new Date()
+                          var curHr = today.getHours()
+                          console.log('CHECKED OUT!')
+
+                          io.emit('message', (rfid));
+                          io.emit('color', ('#ffffff'));
+                          io.emit('firstname', (result[0].firstname));
+                          io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
+                          io.emit('middlename', (result[0].middlename.charAt(0)));
+                          io.emit('valid', ('visible'));
+
+                          io.emit('admission_no', (result[0].admission_no));
+                      
+                          // if (result[0].major_in == null || result[0].major_in == '' || result[0].major_in == 'none' || result[0].major_in == 'None'){
+                          //     io.emit('section', (result[0].program_name));
+                          //   }else{
+                          //     io.emit('section', (result[0].program_name+'-'+result[0].major_in));
+                          //   }
+                            
+                          io.emit('section', (result[0].program_short_name));
+
+                          if (result[0].image == null || result[0].image == ''){
+                              io.emit('studImage', ('/uploads/student_images/default.jpg'));
+                          }
+                          else{
+                              io.emit('studImage', ('/uploads/student_images/' + result[0].image));
+                          };
+
+                          io.emit('status', ('CHECKED OUT'));
+                          console.log(rfid);
+                          console.log('CHECKED OUT');
+                          console.log('Firstname: '+result[0].firstname);
+                          console.log('Middlename: '+result[0].middlename.charAt(0));
+                          console.log('Lastname: '+result[0].lastname);
+                          console.log('Program Short Name: '+result[0].program_short_name);
+                          console.log('Program: '+result[0].program_name);
+                          console.log('Major: '+result[0].major_in);
+                          console.log('ID No.: '+result[0].admission_no);
+                          console.log('Image: '+result[0].image);
+                      
+                          var dateTime =  yyyymmdd.withTime();
+                          var time = new Date();
+                          request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
+                              {form:{ sms_number: result[0].guardian_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is OUT school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: 'MVC', student_id: result[0].student_id , tapped_type: 'OUT' }}, 
+                              function(error, response, body){
+                                  console.log(body);
+                          });
+
+                          var d = new Date(),
+                          minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
+                          hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
+
+                          var dateTime =  yyyymmdd.withTime();
+                          
+                          time = hours+':'+minutes;
+
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','OUT','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
+                            if (err) {console.log('Insert Student Log Failed!');
+                            }else{console.log('Insert Student Log Success!');}
+                          });
+
+                      }
+
+
+                    });
+                  }
+                
+                  else if (staffID.length > 0){
+                    console.log('Staff ID found');
+                    con.query("SELECT * FROM staffs WHERE rfid_number = " + rfid, function (err, result, fields) {
+                      if (err) {console.log("scan error staff2");}else{
+                          var today = new Date()
+                          var curHr = today.getHours()
+                      
+                          var d = new Date(),
+                          minutes = d.getMinutes().toString().length == 1 ? '0'+d.getMinutes() : d.getMinutes(),
+                          hours = d.getHours().toString().length == 1 ? '0'+d.getHours() : d.getHours();
+
+                          var dateTime =  yyyymmdd.withTime();
+                          
+
+                          // dateTime = d.getFullYear()+'-'+d.getDate()+'-'+d.getMonth()+' '+hours+':'+minutes
+                          time = hours+':'+minutes;
+
+                          io.emit('message', (rfid));
+                          io.emit('color', ('#ffffff'));
+                          io.emit('firstname', (result[0].firstname));
+                          io.emit('lastname', (result[0].lastname+'&ensp;'+result[0].middlename.charAt(0)));
+                          io.emit('middlename', (result[0].middlename.charAt(0)));
+                          io.emit('valid', ('visible'));
+
+                          io.emit('admission_no', (result[0].role.toUpperCase()));
+                          io.emit('section', (''));
+
+                          if (result[0].image == null || result[0].image == ''){
+                                  io.emit('studImage', ('uploads/student_images/default.jpg'));
+                          }else{
+                              io.emit('studImage', (result[0].image));
+                          };
+
+                          io.emit('status', ('CHECKED OUT'));
+
+                          
+                          request.post('http://157.230.43.105/' + schoolV + '/ajax/insertfacultydtr', 
+                          {form:{ faculty_id: result[0].user_id, role: result[0].role, type: 'OUT', time: time, date: dateTime}}, 
+                              function(error, response, body){
+                                  console.log(body);
+                          });
+
+                          var time = new Date();
+                          request.post('http://157.230.43.105/smsgateway/sms/insertsmsque', 
+                              {form:{ sms_number: faculty_phone, sms_msg: result[0].lastname+", "+result[0].firstname+" is OUT school at "+(time.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true }))+". This is an Autogenerated SMS by Bridgette. Please do not reply.", date_created: dateTime, school_code: schoolV.toUpperCase(), role: result[0].role, student_id: result[0].user_id , tapped_type: 'OUT' }}, 
+                          function(error, response, body){
+                                  console.log(body);
+                          });
+
+                          console.log('CHECKED OUT');
+                          console.log(result[0].role);
+                          console.log(rfid);
+                          console.log(result[0].firstname);
+                          console.log(result[0].lastname+'&ensp;'+result[0].middlename.charAt(0));
+                          console.log(result[0].middlename.charAt(0));
+                          console.log(result[0].image);
+                          console.log(dateTime);
+                          console.log(time);
+
+                      }
+
+
+                    });
+                  }
+                  else{
+                    console.log('Invalid RFID');
+                      io.emit('firstname', ('Loading...'));
+                      io.emit('lastname', ('Loading...'));
+                      io.emit('admission_no', ('Loading...'));
+                      io.emit('class', ('Loading...'));
+                      io.emit('section', ('Loading...'));
+                      io.emit('studImage', ('uploads/student_images/default.jpg'));
+                      io.emit('status', ('INVALID RFID'));
+                      io.emit('invalid', ('hidden'));
+                      io.emit('color', ('#ffffff'));
+                  }
+                  //----------------------------------------------Invalid RFID end--------------------------------------------------------------
+                }
+              });
+            }
+          });
+        }
+      });
+
+      clearTimeout(RefreshPage);
+      RefreshPage =  setTimeout(function() {
+        console.log("refresh page! :" + rfid);
+        io.emit('statusC', ('hidden'));
+      }, RefreshPageInterval);
+
+      clearTimeout(modalPage);
+      modalPage =  setTimeout(function() {
+        console.log("show modal page! :" + rfid);
+        io.emit('myModal', ('show'));
+        io.emit('modalTitle', (''));
+      }, modalPageInterval);
     });
-//---------------------------------------------- Query End ------------------------------------------------------------------
-});
 //---------------------------------------------- Scanner End -----------------------------------------------------------------
