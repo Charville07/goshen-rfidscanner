@@ -25,6 +25,7 @@ let options = [];
 
 var schoolV = "mvc";
 var faculty_phone = "09164812418";
+var tapping_loc = "main_gate";
 
 var RefreshPage;
 var RefreshPageInterval = 180000;//180000;
@@ -244,7 +245,7 @@ var sys   = require('util'),
                           
                           time = hours+':'+minutes;
 
-                          con.query("INSERT INTO student_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tapping_loc) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle', '" + tapping_loc + "')", function (err, update, fields) {
                             if (err) {console.log('Insert Student Log Failed!');
                             }else{console.log('Insert Student Log Success!');}
                           });
