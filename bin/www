@@ -25,13 +25,17 @@ let options = [];
 
 var schoolV = "mvc";
 var faculty_phone = "09164812418";
-var tapping_loc = "main_gate";
+var student_url = "https://mvc.bridgette.app/staging/api/col_student_info/getstudentlist/";
+var picture_url = "https://mvc.bridgette.app/staging/uploads/col/students/";
+var tap_loc = "main-gate";
+var tap_type = "student_tapping";
+
 
 var RefreshPage;
 var RefreshPageInterval = 180000;//180000;
 
 var modalPage;
-var modalPageInterval = 300000;//300000;
+var modalPageInterval = 10000;//300000;
 let modalPageTitle = "";
 let modalPageMessage = "";
 
@@ -66,7 +70,20 @@ internetAvailable({
 
   console.log("Internet available");
   
-  var url = "https://mvc.bridgette.app/staging/api/col_student_info/getstudentlist/";
+  for (var i = 1; i < 6; i++) {
+    options = {
+      url : "https://mvc.bridgette.app/staging/uploads/school_posters/banner" + i + ".jpg",
+      dest: './public/uploads/school_posters/' // Save to /path/to/dest/image.jpg
+    }
+  
+    download.image(options)
+      .then(({ filename, image }) => {
+        console.log('Saved to', filename)  // Saved to /path/to/dest/image.jpg
+    })
+      .catch((err) => console.error(err))
+  }
+
+  var url = student_url;
   request({
       url: url,
       json: true
@@ -165,6 +182,7 @@ var sys   = require('util'),
       console.log('Scanner 1 - IN');
       console.log(rfid);
       io.emit('myModal', ('hide'));
+      io.emit('myBanner', ('hide'));
       //---------------------------------------- Query start -----------------------------------------------------------------------
       con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
         if (err) {console.log("scan error students");}else{
@@ -179,7 +197,7 @@ var sys   = require('util'),
                       if (err) {console.log("scan error student2");}else{
 
                         options = {
-                          url : "https://mvc.bridgette.app/staging/uploads/col/students/" + result[0].image,
+                          url : picture_url + result[0].image,
                           dest: './public/uploads/student_images/' // Save to /path/to/dest/image.jpg
                         }
 
@@ -245,7 +263,7 @@ var sys   = require('util'),
                           
                           time = hours+':'+minutes;
 
-                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tapping_loc) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle', '" + tapping_loc + "')", function (err, update, fields) {
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle', '"+tap_loc+"', '"+tap_type+"')", function (err, update, fields) {
                             if (err) {console.log('Insert Student Log Failed!');
                             }else{console.log('Insert Student Log Success!');}
                           });
@@ -351,6 +369,7 @@ var sys   = require('util'),
         console.log("show modal page! :" + rfid);
         io.emit('myModal', ('show'));
         io.emit('modalTitle', (''));
+        io.emit('myBanner', ('active'));
       }, modalPageInterval);
     });
 
@@ -381,6 +400,7 @@ var sys   = require('util'),
       console.log('Scanner 2 - OUT');
       console.log(rfid);
       io.emit('myModal', ('hide'));
+      io.emit('myBanner', ('hide'));
       //---------------------------------------- Query start -----------------------------------------------------------------------
       con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
         if (err) {console.log("scan error students");}else{
@@ -450,7 +470,7 @@ var sys   = require('util'),
                           
                           time = hours+':'+minutes;
 
-                          con.query("INSERT INTO student_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','OUT','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type) VALUES ('"+result[0].student_id+"','OUT','"+time+"','"+dateTime+"','idle', " + tap_loc +", '" + tap_type +"')", function (err, update, fields) {
                             if (err) {console.log('Insert Student Log Failed!');
                             }else{console.log('Insert Student Log Success!');}
                           });
@@ -556,6 +576,7 @@ var sys   = require('util'),
         console.log("show modal page! :" + rfid);
         io.emit('myModal', ('show'));
         io.emit('modalTitle', (''));
+        io.emit('myBanner', ('active'));
       }, modalPageInterval);
     });
 //---------------------------------------------- Scanner End -----------------------------------------------------------------
