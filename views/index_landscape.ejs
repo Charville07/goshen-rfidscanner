@@ -70,21 +70,11 @@
       })
 
       socket.on('myModal', function(show) {
-        // $('#myModal').modal(show);
-      })
-
-      socket.on('myBanner', function(active) {
-        console.log(active);
-        if (active == 'active'){
-          document.getElementById("banner").classList.add("active");
-        }else{
-          document.getElementById("banner").classList.remove("active");
-        }
-        e.preventDefault();
+        $('#myModal').modal(show);
       })
 
       socket.on('modalTitle', function(modalTitle) {
-        // document.getElementById("modalTitle").innerHTML = modalTitle;
+        document.getElementById("modalTitle").innerHTML = modalTitle;
       })
 
         socket.on('invalid', function(invalid) {
@@ -95,13 +85,17 @@
         document.getElementById("displaySection").style.visibility = invalid;   
         })
 
+
         socket.on('valid', function(valid) {
         document.getElementById("status").style.color = '#009900';
         document.getElementById("admission_no").style.visibility = valid;   
         document.getElementById("displayFname").style.visibility = valid;   
         document.getElementById("displayLname").style.visibility = valid;   
         document.getElementById("displaySection").style.visibility = valid;   
+
         })
+
+
 
         socket.on('pass', function(pass) {
           document.getElementById("pass").innerHTML = pass;
@@ -113,64 +107,85 @@
 
     </script>
 
-<section class="mainsection">
-  <div class="container-fluid" style="padding:0px!important;">
-    <div class="row content">
-        <div class="col-sm-5" >
-            <div class="row" style="background-position:right;background-size:cover;height:49%;margin-top: 10px;">
-            <div class="col-sm-4" style="padding-right:0px;">	
-                    <img src="/images/s_logo.png" style="width:90%;margin-left:13%;" >	
-            </div>
-            <div class="col-sm-8" style="margin-top:4%;padding-left:12px;">		
-                <img src="/images/slogo2.png" style="width:90%;margin-top: 30px;" >	
-            </div>
-            
-            <img id="studImage" src="uploads/student_images/default.jpg" style="height:auto;width:465px;margin-left:53px; margin-top: 20px; border-style: solid; border-width: thin; border-color: #e4e1e1;" >
-        
-            </div>
-        </div>
 
-        <div class="col-sm-7">
-            <div class="row">
-                <div class="col-sm-6">
-                <p class="clock" id="clockbox" style="float:left"></p>
-                </div>
-                <div class="col-sm-6" style="float:right;text-align:right;">
-                <p class="date" id="clockbox2" style="line-height:50%;margin:0!important;padding-top:15%;"></p>
-                <p class="date" id="clockbox3"></p>
-                </div>
 
-                <div class="col-sm-12" id="statusC" style="margin-top:2%;height:15%;visibility:hidden;background-color:#ffffff;text-align:center;">
-                    <h1 id="status" style="margin:0px;padding:2%;visibility:hidden;font-size:420%;font-family:oswald;font-weight:bold;color:#009900;">CHECKED</h1>
-                </div>
 
-        
-                <div class="col-sm-12">
-                    <p id="admission_no" class="lrn" style="visibility:hidden;"></p>
-                    <p id="displayFname" class="fname" style="visibility:hidden;"></p>
-                    <p id="displayLname" class="lname" style="visibility:hidden;">&ensp;</p>
-                    <p id="displaySection" class="section" style="visibility:hidden;"></p>
-                </div>
-                <div class="col-sm-12">
-                    <p id="device_status" style="float:left;padding-left: 5%;padding-top:8%;font-size: 45px;color: #c3ddf7;font-weight: bold;"></p>
-                    <img src="/images/poweredby.jpg" style="width:30%;float:right;padding-right:5%;padding-top:7%;" >
-                </div>
-
-            </div>
-        </div>
+<div class="container-fluid" style="padding:0px!important;">
+  <div class="row content">
+      <div class="col-sm-5" >
+        <div class="row" style="background-position:right;background-size:cover;height:49%;margin-top: 10px;">
+          <div class="col-sm-4" style="padding-right:0px;">	
+		        <img src="/images/s_logo.png" style="width:90%;margin-left:13%;" >	
+      	  </div>
+          <div class="col-sm-8" style="margin-top:4%;padding-left:12px;">		
+            <img src="/images/slogo2.png" style="width:90%" >	
+          </div>
+          
+          <img id="studImage" src="uploads/student_images/default.jpg" style="height:auto;width:465px;margin-left:53px; margin-top: -80px; border-style: solid; border-width: thin; border-color: #e4e1e1;" >
+	  
+	      </div>
     </div>
-  </div>
-</section>
 
-<section class="banner" id='banner'>
-  <ul class="cb-slideshow">
-    <li><span>Banner 01</span><div></div></li>
-    <li><span>Banner 02</span><div></div></li>
-    <li><span>Banner 03</span><div></div></li>
-    <li><span>Banner 04</span><div></div></li>
-    <li><span>Banner 05</span><div></div></li>
-  </ul>
-</section>
+      <div class="col-sm-7">
+        <div class="row">
+            <div class="col-sm-6">
+              <p class="clock" id="clockbox" style="float:left"></p>
+            </div>
+            <div class="col-sm-6" style="float:right;text-align:right;">
+              <p class="date" id="clockbox2" style="line-height:50%;margin:0!important;padding-top:15%;"></p>
+              <p class="date" id="clockbox3"></p>
+            </div>
+
+          <div class="col-sm-12" id="statusC" style="margin-top:2%;height:15%;visibility:hidden;background-color:#ffffff;text-align:center;">
+            <h1 id="status" style="margin:0px;padding:2%;visibility:hidden;font-size:420%;font-family:oswald;font-weight:bold;color:#009900;">CHECKED</h1>
+          </div>
+
+	
+	  <div class="col-sm-12">
+	  	<p id="admission_no" class="lrn" style="visibility:hidden;"></p>
+		<p id="displayFname" class="fname" style="visibility:hidden;"></p>
+		<p id="displayLname" class="lname" style="visibility:hidden;">&ensp;</p>
+		<p id="displaySection" class="section" style="visibility:hidden;"></p>
+	  </div>
+	  <div class="col-sm-12">
+        <p id="device_status" style="float:left;padding-left: 5%;padding-top:11%;font-size: 45px;color: #c3ddf7;font-weight: bold;"></p>
+		<img src="/images/poweredby.jpg" style="width:30%;float:right;padding-right:5%;padding-top:11%;" >
+    </div>
+
+
+      <div id="myModal" class="modal" tabindex="-1" role="dialog" >
+        <div class="modal-dialog modal-lg" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="modalTitle"></h5>
+            </div>
+            <div class="modal-body">
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="row">
+                    <div class="col-md-12" style="text-align: center;">	
+                      <img src="/images/slogo2.png"  style="text-align: center;">	
+                    </div>
+                    <div class="col-md-12" style="text-align: center;">		
+                      <img src="/images/s_logo.png" style="width: 50%;">	
+                    </div>
+                  </div>
+                </div>
+                <!-- <div class="col-md-6">asdf</div> -->
+              </div>
+            </div>
+            <div class="modal-footer">
+              <!-- <button type="button" class="btn btn-primary">Save changes</button>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button> -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+       </div>
+      </div>
+</div>
 
 </body>
 </html>
