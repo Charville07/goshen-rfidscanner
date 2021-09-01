@@ -66,7 +66,7 @@
 	height:30%;
 }
 
-   /* .section{
+   .section{
 	color:white;
 	font-size:280%;
 	font-family:oswald;
@@ -74,7 +74,7 @@
 	letter-spacing:1px;
 	padding-left:5%;
 	font-weight:bold;
-} */
+}
 
 .mainsection, .banner {
 	position: absolute;
