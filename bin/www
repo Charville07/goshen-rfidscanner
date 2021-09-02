@@ -25,6 +25,11 @@ let options = [];
 
 var schoolV = "mvc";
 var faculty_phone = "09164812418";
+var student_url = "https://mvc.bridgette.app/staging/api/col_student_info/getstudentlist/";
+var picture_url = "https://mvc.bridgette.app/staging/uploads/col/students/";
+var tap_loc = "main-gate";
+var tap_type = "student_tapping";
+
 
 var RefreshPage;
 var RefreshPageInterval = 180000;//180000;
@@ -65,7 +70,7 @@ internetAvailable({
 
   console.log("Internet available");
   
-  var url = "https://mvc.bridgette.app/staging/api/col_student_info/getstudentlist/";
+  var url = student_url;
   request({
       url: url,
       json: true
@@ -178,7 +183,7 @@ var sys   = require('util'),
                       if (err) {console.log("scan error student2");}else{
 
                         options = {
-                          url : "https://mvc.bridgette.app/staging/uploads/col/students/" + result[0].image,
+                          url : picture_url + result[0].image,
                           dest: './public/uploads/student_images/' // Save to /path/to/dest/image.jpg
                         }
 
@@ -244,7 +249,7 @@ var sys   = require('util'),
                           
                           time = hours+':'+minutes;
 
-                          con.query("INSERT INTO student_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle', '"+tap_loc+"', '"+tap_type+"')", function (err, update, fields) {
                             if (err) {console.log('Insert Student Log Failed!');
                             }else{console.log('Insert Student Log Success!');}
                           });
@@ -449,7 +454,7 @@ var sys   = require('util'),
                           
                           time = hours+':'+minutes;
 
-                          con.query("INSERT INTO student_log (student_id,type,time,date,status) VALUES ('"+result[0].student_id+"','OUT','"+time+"','"+dateTime+"','idle')", function (err, update, fields) {
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type) VALUES ('"+result[0].student_id+"','OUT','"+time+"','"+dateTime+"','idle', " + tap_loc +", '" + tap_type +"')", function (err, update, fields) {
                             if (err) {console.log('Insert Student Log Failed!');
                             }else{console.log('Insert Student Log Success!');}
                           });
