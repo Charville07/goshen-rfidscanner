@@ -27,9 +27,9 @@ var schoolV = "mvc";
 var faculty_phone = "09164812418";
 var student_url = "https://mvc.bridgette.app/api/col_student_info/getstudentlist/";
 var picture_url = "https://mvc.bridgette.app/uploads/col/students/";
-var tap_loc = "pearl";
-var tap_type = "dorm"; // tapping type = [church, worship, gate, dorm]
-var tap_hostel_id = "2";
+var tap_loc = "admin";
+var tap_type = "gate"; // tapping type = [church, worship, gate, dorm]
+var tap_hostel_id = "";
 
 var RefreshPage;
 var RefreshPageInterval = 180000;//180000;
