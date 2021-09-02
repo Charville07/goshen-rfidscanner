@@ -25,17 +25,17 @@ let options = [];
 
 var schoolV = "mvc";
 var faculty_phone = "09164812418";
-var student_url = "https://mvc.bridgette.app/staging/api/col_student_info/getstudentlist/";
-var picture_url = "https://mvc.bridgette.app/staging/uploads/col/students/";
+var student_url = "https://mvc.bridgette.app/api/col_student_info/getstudentlist/";
+var picture_url = "https://mvc.bridgette.app/uploads/col/students/";
 var tap_loc = "main-gate";
-var tap_type = "student_tapping";
-
+var tap_type = "gate"; // tapping type = [church, worship, gate, dorm]
+var tap_hostel_id = "";
 
 var RefreshPage;
 var RefreshPageInterval = 180000;//180000;
 
 var modalPage;
-var modalPageInterval = 300000;//300000;
+var modalPageInterval = 10000;//10000;
 let modalPageTitle = "";
 let modalPageMessage = "";
 
@@ -62,6 +62,20 @@ io.sockets.on('connection', function (socket) {
 });
 
 
+clearTimeout(RefreshPage);
+RefreshPage =  setTimeout(function() {
+  console.log("refresh page! :" + rfid);
+  io.emit('statusC', ('hidden'));
+}, RefreshPageInterval);
+
+clearTimeout(modalPage);
+modalPage =  setTimeout(function() {
+  console.log("show modal page! :" + rfid);
+  io.emit('myModal', ('show'));
+  io.emit('modalTitle', (''));
+  io.emit('myBanner', ('active'));
+}, modalPageInterval);
+
 internetAvailable({
   domainName: "mvc.bridgette.app",
   port: 53,
@@ -70,6 +84,19 @@ internetAvailable({
 
   console.log("Internet available");
   
+  for (var i = 1; i < 6; i++) {
+    options = {
+      url : "https://mvc.bridgette.app/uploads/school_posters/banner" + i + ".jpg",
+      dest: './public/uploads/school_posters/' // Save to /path/to/dest/image.jpg
+    }
+  
+    download.image(options)
+      .then(({ filename, image }) => {
+        console.log('Saved to', filename)  // Saved to /path/to/dest/image.jpg
+    })
+      .catch((err) => console.error(err))
+  }
+
   var url = student_url;
   request({
       url: url,
@@ -93,10 +120,16 @@ internetAvailable({
                         jsondata[i].guardian_phone,
                         jsondata[i].rfid_number,
                         jsondata[i].lunch_pass,
-                        jsondata[i].commuter_pass
+                        jsondata[i].commuter_pass,
+                        jsondata[i].student_hostel_id,
+                        jsondata[i].hostel_status,
+                        jsondata[i].effective_sy,
+                        jsondata[i].term_last_activated
+                        
+                        
                       ]);
           }
-          con.query("truncate students"+";"+'INSERT INTO students (student_id,admission_no,program_short_name,program_name,major_in,firstname,middlename,lastname,image,guardian_phone,rfid_number,lunch_pass,commuter_pass) VALUES ?', [values], function(err,result) {
+          con.query("truncate students"+";"+'INSERT INTO students (student_id, admission_no, program_short_name, program_name, major_in, firstname, middlename, lastname, image, guardian_phone, rfid_number, lunch_pass, commuter_pass, hostel_id, dormitory, effective_sy, term_last_activated) VALUES ?', [values], function(err,result) {
           if(err) {
             console.log('Update Student List Failed!');
           }else{
@@ -169,6 +202,7 @@ var sys   = require('util'),
       console.log('Scanner 1 - IN');
       console.log(rfid);
       io.emit('myModal', ('hide'));
+      io.emit('myBanner', ('hide'));
       //---------------------------------------- Query start -----------------------------------------------------------------------
       con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
         if (err) {console.log("scan error students");}else{
@@ -249,9 +283,26 @@ var sys   = require('util'),
                           
                           time = hours+':'+minutes;
 
-                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle', '"+tap_loc+"', '"+tap_type+"')", function (err, update, fields) {
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type, hostel_id) VALUES ('"+result[0].student_id+"','IN','"+time+"','"+dateTime+"','idle', '"+tap_loc+"', '"+tap_type+"', '" + tap_hostel_id + "')", function (err, update, fields) {
                             if (err) {console.log('Insert Student Log Failed!');
                             }else{console.log('Insert Student Log Success!');}
+                          });
+
+                          //send student tapping log
+
+                          request.post('https://mvc.bridgette.app/api/col_student_info/insertstudentlog', 
+                            {form:{ 
+                              student_id: result[0].student_id , 
+                              admission_no: result[0].admission_no , 
+                              status: 'IN',
+                              time: time, 
+                              date: dateTime, 
+                              tap_loc: tap_loc, 
+                              tap_type: tap_type, 
+                              hostel_id: tap_hostel_id
+                            }}, 
+                            function(error, response, body){
+                                console.log(body);
                           });
 
                       }
@@ -326,11 +377,11 @@ var sys   = require('util'),
                   }
                   else{
                     console.log('Invalid RFID');
-                      io.emit('firstname', ('Loading...'));
-                      io.emit('lastname', ('Loading...'));
-                      io.emit('admission_no', ('Loading...'));
-                      io.emit('class', ('Loading...'));
-                      io.emit('section', ('Loading...'));
+                      io.emit('firstname', (''));
+                      io.emit('lastname', (''));
+                      io.emit('admission_no', (''));
+                      io.emit('class', (''));
+                      io.emit('section', (''));
                       io.emit('studImage', ('uploads/student_images/default.jpg'));
                       io.emit('status', ('INVALID RFID'));
                       io.emit('invalid', ('hidden'));
@@ -355,6 +406,7 @@ var sys   = require('util'),
         console.log("show modal page! :" + rfid);
         io.emit('myModal', ('show'));
         io.emit('modalTitle', (''));
+        io.emit('myBanner', ('active'));
       }, modalPageInterval);
     });
 
@@ -385,6 +437,7 @@ var sys   = require('util'),
       console.log('Scanner 2 - OUT');
       console.log(rfid);
       io.emit('myModal', ('hide'));
+      io.emit('myBanner', ('hide'));
       //---------------------------------------- Query start -----------------------------------------------------------------------
       con.query("SELECT id FROM students WHERE rfid_number = " + rfid, function (err, studID, fields) {
         if (err) {console.log("scan error students");}else{
@@ -454,9 +507,26 @@ var sys   = require('util'),
                           
                           time = hours+':'+minutes;
 
-                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type) VALUES ('"+result[0].student_id+"','OUT','"+time+"','"+dateTime+"','idle', " + tap_loc +", '" + tap_type +"')", function (err, update, fields) {
+                          con.query("INSERT INTO student_log (student_id,type,time,date,status, tap_loc, tap_type, hostel_id) VALUES ('"+result[0].student_id+"','OUT','"+time+"','"+dateTime+"','idle', '"+tap_loc+"', '"+tap_type+"', '" + tap_hostel_id + "')", function (err, update, fields) {
                             if (err) {console.log('Insert Student Log Failed!');
                             }else{console.log('Insert Student Log Success!');}
+                          });
+
+                          //send student tapping log
+
+                          request.post('https://mvc.bridgette.app/api/col_student_info/insertstudentlog', 
+                            {form:{ 
+                              student_id: result[0].student_id , 
+                              admission_no: result[0].admission_no , 
+                              status: 'OUT',
+                              time: time, 
+                              date: dateTime, 
+                              tap_loc: tap_loc, 
+                              tap_type: tap_type, 
+                              hostel_id: tap_hostel_id
+                            }}, 
+                            function(error, response, body){
+                                console.log(body);
                           });
 
                       }
@@ -560,6 +630,7 @@ var sys   = require('util'),
         console.log("show modal page! :" + rfid);
         io.emit('myModal', ('show'));
         io.emit('modalTitle', (''));
+        io.emit('myBanner', ('active'));
       }, modalPageInterval);
     });
 //---------------------------------------------- Scanner End -----------------------------------------------------------------

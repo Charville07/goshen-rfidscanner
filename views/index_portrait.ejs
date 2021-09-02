@@ -10,46 +10,49 @@
     <script src="javascripts/bootstrap.min.js"></script>
     <script src="javascripts/time.js"></script>
   </head>
-  <body style="background-color: #000265">
+  <body>
+
 
     <script src="/socket.io/socket.io.js"></script>
   
     <script>
-      var socket = io.connect('http://localhost:8080');
+        var socket = io.connect('http://localhost:8080');
 
-      socket.on('firstname', function(firstname) {
-        document.getElementById("displayFname").innerHTML = firstname;
-        document.getElementById("displayFname").style.visibility = 'visible';   
-      })
 
-      socket.on('lastname', function(lastname) {
-        document.getElementById("displayLname").innerHTML = lastname;
-        document.getElementById("displayLname").style.visibility = 'visible';    
-      })
 
-      socket.on('section', function(section) {
-        document.getElementById("displaySection").innerHTML = section;
-        document.getElementById("displaySection").style.visibility = 'visible';
-      })
+        socket.on('firstname', function(firstname) {
+      document.getElementById("displayFname").innerHTML = firstname;
+      document.getElementById("displayFname").style.visibility = 'visible';   
+     })
 
-      socket.on('admission_no', function(admission_no) {
-        document.getElementById("admission_no").innerHTML = admission_no;
-        document.getElementById("admission_no").style.visibility = 'visible';
-      })
+        socket.on('lastname', function(lastname) {
+      document.getElementById("displayLname").innerHTML = lastname;
+      document.getElementById("displayLname").style.visibility = 'visible';    
+	})
 
-	    socket.on('studImage', function(studImage) {
+        socket.on('section', function(section) {
+      document.getElementById("displaySection").innerHTML = section;
+      document.getElementById("displaySection").style.visibility = 'visible';
+        })
+
+        socket.on('admission_no', function(admission_no) {
+      document.getElementById("admission_no").innerHTML = admission_no;
+      document.getElementById("admission_no").style.visibility = 'visible';
+        })
+
+	  socket.on('studImage', function(studImage) {
         document.getElementById("studImage").src = studImage;
-	    })
+	})
   
-      socket.on('status', function(status) {
-        document.getElementById("status").innerHTML = status;
-        document.getElementById("status").style.visibility = 'visible';
-        document.getElementById("statusC").style.visibility = 'visible';
-      })
+        socket.on('status', function(status) {
+      document.getElementById("status").innerHTML = status;
+      document.getElementById("status").style.visibility = 'visible';
+      document.getElementById("statusC").style.visibility = 'visible';
+    })
     
-      socket.on('color', function(color) {
-        document.getElementById("statusC").style.backgroundColor = color;
-      })
+    socket.on('color', function(color) {
+      document.getElementById("statusC").style.backgroundColor = color;
+    })
      
       socket.on('statusC', function(statusC) {
         document.getElementById("status").style.visibility = statusC;
@@ -67,36 +70,46 @@
       })
 
       socket.on('myModal', function(show) {
-        $('#myModal').modal(show);
+        // $('#myModal').modal(show);
+      })
+
+      socket.on('myBanner', function(active) {
+        console.log(active);
+        if (active == 'active'){
+          document.getElementById("banner").classList.add("active");
+        }else{
+          document.getElementById("banner").classList.remove("active");
+        }
+        e.preventDefault();
       })
 
       socket.on('modalTitle', function(modalTitle) {
-        document.getElementById("modalTitle").innerHTML = modalTitle;
+        // document.getElementById("modalTitle").innerHTML = modalTitle;
       })
 
-      socket.on('invalid', function(invalid) {
+        socket.on('invalid', function(invalid) {
         document.getElementById("status").style.color = '#fe0000';
         document.getElementById("admission_no").style.visibility = invalid;   
         document.getElementById("displayFname").style.visibility = invalid;   
         document.getElementById("displayLname").style.visibility = invalid;   
         document.getElementById("displaySection").style.visibility = invalid;   
-      })
+        })
 
 
-      socket.on('valid', function(valid) {
+        socket.on('valid', function(valid) {
         document.getElementById("status").style.color = '#009900';
         document.getElementById("admission_no").style.visibility = valid;   
         document.getElementById("displayFname").style.visibility = valid;   
         document.getElementById("displayLname").style.visibility = valid;   
         document.getElementById("displaySection").style.visibility = valid;   
 
-      })
+        })
 
 
 
-      socket.on('pass', function(pass) {
-        document.getElementById("pass").innerHTML = pass;
-      })
+        socket.on('pass', function(pass) {
+          document.getElementById("pass").innerHTML = pass;
+        })
 
       socket.on('device_status', function(device_status) {
         document.getElementById("device_status").innerHTML = device_status;
@@ -105,82 +118,99 @@
     </script>
 
 
-<div class="container-fluid" style="padding:0px!important;">
-  <div class="row content" style="padding-top: 35px;background-color: #ffffff">
-    <div class="col-sm-12">
-      <div class="row">
-        <div class="col-sm-6">
-          <p class="clock" id="clockbox" style="float:left;color: #171717;"></p>
-        </div>
-        <div class="col-sm-6" style="float:right;text-align:right;">
-          <p class="date" id="clockbox2" style="line-height:50%;margin:0!important;padding-top:15%;color: #171717;"></p>
-          <p class="date" id="clockbox3" style="color: #171717;"></p>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="row content">
-    <div class="col-sm-12">
-      <div class="row" style="background-color: #ffffff;" >
-        <!-- <div class="col-sm-4" style="margin-top:3%;padding-right:0px;z-index:99;background-color: #ffffff">	 -->
-        <div class="col-sm-4" style="margin-top:3%;padding-right:0px;z-index:99">	
-          <img src="/images/s_logo.png" style="width:95%;margin-left:13%;" >	
-        </div>
-        
-        <div class="col-sm-8" style="background-color: #ffffff; padding-bottom: 15px;">
-          <img id="studImage" src="uploads/student_images/default.jpg" style="width:120%;margin-top:-6%;margin-left:-20%;z-index:1;">
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="row content">
-    <div class="col-sm-12">
-      <div class="row">
-        <div class="col-sm-12" id="statusC" style="margin-top:2%;height:15%;visibility:hidden;background-color:#ffffff;text-align:center;">
-          <h1 id="status" style="margin:0px;padding:2%;visibility:hidden;font-size:420%;font-family:oswald;font-weight:bold;color:#009900;">CHECKED IN</h1>
-        </div>
-        <div class="col-sm-12">
-          <p id="admission_no" class="lrn" style="visibility:hidden;"></p>
-          <p id="displayFname" class="fname" style="visibility:hidden;"></p>
-          <p id="displayLname" class="lname" style="visibility:hidden;"></p>
-          <p id="displaySection" class="section" style="visibility:hidden;"></p>
-        </div>
-        <div class="col-sm-12">
-          <p id="device_status" style="float:left;padding-left: 5%;padding-top:11%;font-size: 45px;color: #c3ddf7;font-weight: bold;"></p>
-          <img src="/images/poweredby.jpg" style="width:30%;float:right;padding-right:5%;padding-top:2%;" >
-        </div>
-      </div>
-    </div>
-    <div id="myModal" class="modal" tabindex="-1" role="dialog" >
-      <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="modalTitle"></h5>
+
+<section class="mainsection">
+  <div class="container-fluid" style="padding:0px!important;">
+    <div class="row content" style="background-color: #ffffff">
+      <div class="col-sm-12">
+        <div class="row">
+          <div class="col-sm-6">
+            <p class="clock" id="clockbox" style="float:left;color: #171717;"></p>
           </div>
-          <div class="modal-body">
-            <div class="row">
-              <div class="col-md-12">
+          <div class="col-sm-6" style="float:right;text-align:right;">
+            <p class="date" id="clockbox2" style="line-height:50%;margin:0!important;padding-top:15%;color: #171717;"></p>
+            <p class="date" id="clockbox3" style="color: #171717;"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row content">
+      <div class="col-sm-12">
+        <div class="row" style="background-color: #ffffff;" >
+          <!-- <div class="col-sm-4" style="margin-top:3%;padding-right:0px;z-index:99;background-color: #ffffff">	 -->
+          <div class="col-sm-4" style="margin-top:3%;padding-right:0px;z-index:99">	
+            <img src="/images/s_logo.png" style="width:95%;margin-left:13%;" >	
+          </div>
+          
+          <div class="col-sm-8" style="background-color: #ffffff; padding-bottom: 15px;">
+            <!-- <img id="studImage" src="uploads/student_images/default.jpg" style="width:78%;margin-top:-6%;margin-left:11%;z-index:1;"> -->
+            <img id="studImage" src="uploads/student_images/default.jpg" style="width:78%;margin-left:11%;z-index:1;">
+          </div>
+        </div>
+      </div> 
+    </div>
+    <div class="row content">
+        <div class="col-sm-12">
+          <div class="row">
+            <div class="col-sm-12" id="statusC" style="margin-top:2%;height:15%;visibility:hidden;background-color:#ffffff;text-align:center;">
+              <h1 id="status" style="margin:0px;padding:2%;visibility:hidden;font-size:420%;font-family:oswald;font-weight:bold;color:#009900;">CHECKED</h1>
+            </div>
+  
+    
+      <div class="col-sm-12">
+        <p id="admission_no" class="lrn" style="visibility:hidden;"></p>
+      <p id="displayFname" class="fname" style="visibility:hidden;"></p>
+      <p id="displayLname" class="lname" style="visibility:hidden;">&ensp;</p>
+      <p id="displaySection" class="section" style="visibility:hidden;"></p>
+      </div>
+      <div class="col-sm-12">
+          <p id="device_status" style="float:left;padding-left: 5%;padding-top:11%;font-size: 45px;color: #c3ddf7;font-weight: bold;"></p>
+      <img src="/images/poweredby.jpg" style="width:30%;float:right;padding-right:5%;padding-top:11%;" >
+      </div>
+  
+  
+        <!-- <div id="myModal" class="modal" tabindex="-1" role="dialog" >
+          <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle"></h5>
+              </div>
+              <div class="modal-body">
                 <div class="row">
-                  <div class="col-md-12" style="text-align: center;">	
-                    <img src="/images/slogo2.png"  style="text-align: center;">	
-                  </div>
-                  <div class="col-md-12" style="text-align: center;">		
-                    <img src="/images/s_logo.png" style="width: 50%;">	
+                  <div class="col-md-12">
+                    <div class="row">
+                      <div class="col-md-12" style="text-align: center;">	
+                        <img src="/images/slogo2.png"  style="text-align: center;">	
+                      </div>
+                      <div class="col-md-12" style="text-align: center;">		
+                        <img src="/images/s_logo.png" style="width: 50%;">	
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <!-- <div class="col-md-6">asdf</div> -->
+              <div class="modal-footer">
+                
+              </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <!-- <button type="button" class="btn btn-primary">Save changes</button>
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button> -->
-          </div>
+        </div> -->
+  
+  
+         </div>
         </div>
-      </div>
-    </div>
   </div>
-</div>
+</section>
+
+<section class="banner" id='banner'>
+  <ul class="cb-slideshow">
+    <li><span>Banner 01</span><div></div></li>
+    <li><span>Banner 02</span><div></div></li>
+    <li><span>Banner 03</span><div></div></li>
+    <li><span>Banner 04</span><div></div></li>
+    <li><span>Banner 05</span><div></div></li>
+  </ul>
+</section>
 
 </body>
 </html>
